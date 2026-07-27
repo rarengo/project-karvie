@@ -185,6 +185,8 @@
   },
   "active": "c5867c48e2efd749",
   "lastOpenFiles": [
+    "services/web-dashboard/src/env.d.ts",
+    "services/web-dashboard/tsconfig.json",
     "services/agent-orchestrator/Dockerfile",
     "services/agent-orchestrator/app/main.py",
     "services/agent-orchestrator/app/graph/workflow.py",
@@ -194,8 +196,6 @@
     "services/agent-orchestrator/app/agents/coder.py",
     "services/agent-orchestrator/app/agents/planner.py",
     "services/agent-orchestrator/app/agents",
-    "services/agent-orchestrator/app/tools/aws_tool.py",
-    "services/agent-orchestrator/app/tools/git_tool.py",
     "vault/coding-standards/vue-typescript-guide.md",
     "vault/architecture-decisions/0001-hybrid-memory.md",
     "README.md"
