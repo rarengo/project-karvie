@@ -1,0 +1,35 @@
+model_list:
+  # Primary Local Coding Model (Optimized for 16GB RAM laptop host: Qwen2.5-Coder-7B)
+  - model_name: karvie-coder
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://ollama:11434
+      temperature: 0.2
+      max_tokens: 4096
+
+  # Secondary Lightweight Utility Model
+  - model_name: karvie-utility
+    litellm_params:
+      model: ollama/qwen2.5-coder:1.5b
+      api_base: http://ollama:11434
+      temperature: 0.2
+
+  # Local Embedding Model (~270MB RAM footprint)
+  - model_name: karvie-embedder
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://ollama:11434
+
+  # Cloud Heavy Reasoning Fallback (For complex multi-file refactoring)
+  - model_name: karvie-cloud-reasoner
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+general_settings:
+  master_key: "sk-karvie-local-master-key"
+
+router_settings:
+  routing_strategy: "usage-based-routing-v2"
+  redis_host: "redis"
+  redis_port: 6379
