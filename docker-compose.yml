@@ -80,6 +80,36 @@ services:
       - redis
       - ollama
 
+  # 5. Karvie RAG Memory & AST Indexer Service (Python 3.12 + FastAPI)
+  memory-service:
+    build:
+      context: ./services/memory-service
+      dockerfile: Dockerfile
+    container_name: karvie-memory-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-karvie_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-karvie_secure_password_change_me!}
+      POSTGRES_DB: ${POSTGRES_DB:-karvie_db}
+      LITELLM_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-karvie-local-master-key}
+      PORT: 8081
+    volumes:
+      - ./vault:/app/vault:ro
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    depends_on:
+      postgres:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+
 volumes:
   pgdata:
   redisdata:
