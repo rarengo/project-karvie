@@ -110,7 +110,28 @@ services:
       litellm:
         condition: service_started
 
-  # 6. Karvie Web UI Dashboard (Vue 3 + Glassmorphism + NGINX)
+  # 6. Karvie LangGraph Multi-Agent Orchestrator (Python 3.12 + FastAPI)
+  agent-orchestrator:
+    build:
+      context: ./services/agent-orchestrator
+      dockerfile: Dockerfile
+    container_name: karvie-agent-orchestrator
+    restart: always
+    ports:
+      - "8082:8082"
+    environment:
+      LITELLM_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-karvie-local-master-key}
+      PORT: 8082
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    depends_on:
+      - litellm
+      - memory-service
+
+  # 7. Karvie Web UI Dashboard (Vue 3 + Glassmorphism + NGINX)
   web-dashboard:
     build:
       context: ./services/web-dashboard
@@ -126,6 +147,7 @@ services:
     depends_on:
       - litellm
       - memory-service
+      - agent-orchestrator
 
 volumes:
   pgdata:

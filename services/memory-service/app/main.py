@@ -1,4 +1,5 @@
 import os
+import asyncio
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -6,23 +7,37 @@ from contextlib import asynccontextmanager
 
 from app.db import get_db_pool, close_db_pool, search_code_context, store_embedding_chunk
 from app.embedder import generate_embedding
-from app.vault_syncer import sync_vault
+from app.vault_syncer import sync_vault, start_vault_watcher
 from app.ast_indexer import chunk_file_content
+
+vault_observer = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global vault_observer
     # Startup: Initialize DB Pool
     await get_db_pool()
+
+    # Start Real-Time Watchdog Observer for Obsidian Vault
+    vault_dir = os.getenv("VAULT_DIR", os.path.join(os.path.dirname(__file__), "../../vault"))
+    if os.path.exists(vault_dir):
+        loop = asyncio.get_running_loop()
+        vault_observer = start_vault_watcher(vault_dir, loop)
+
     yield
-    # Shutdown: Close DB Pool
+
+    # Shutdown: Stop Watchdog & Close DB Pool
+    if vault_observer:
+        vault_observer.stop()
+        vault_observer.join()
     await close_db_pool()
 
 
 app = FastAPI(
     title="Karvie RAG Memory & AST Indexer Service",
-    description="Python FastAPI service providing vector search and code indexing for Project Karvie",
-    version="2.0.0",
+    description="Python FastAPI service providing vector search, YAML frontmatter parsing, and real-time Obsidian vault watching",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -53,7 +68,8 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "karvie-memory-service-python",
-        "version": "2.0.0",
+        "version": "2.1.0",
+        "realtime_watcher": vault_observer is not None and vault_observer.is_alive(),
     }
 
 
@@ -95,7 +111,6 @@ async def index_project(request: IndexProjectRequest):
 
     try:
         for root, dirs, files in os.walk(request.project_path):
-            # Ignore hidden folders, node_modules, and build outputs
             dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("node_modules", "dist", "build", "__pycache__")]
             
             for file in files:

@@ -1,8 +1,56 @@
 import os
-from typing import Dict, Any
+import yaml
+import asyncio
+from typing import Dict, Any, Tuple
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from app.ast_indexer import chunk_file_content
 from app.embedder import generate_embedding
 from app.db import store_embedding_chunk, clear_embeddings
+
+
+def extract_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
+    """Extracts YAML frontmatter headers from markdown files."""
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            try:
+                metadata = yaml.safe_load(parts[1]) or {}
+                body = parts[2].strip()
+                return metadata, body
+            except Exception as e:
+                print(f"Error parsing YAML frontmatter: {e}")
+    return {}, content.strip()
+
+
+async def process_single_file(full_path: str, vault_dir: str):
+    """Processes and embeds a single markdown file into pgvector."""
+    try:
+        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+            raw_content = f.read()
+
+        frontmatter_meta, body = extract_frontmatter(raw_content)
+        rel_path = os.path.relpath(full_path, vault_dir)
+        
+        chunks = chunk_file_content(f"vault/{rel_path}", body)
+        for chunk in chunks:
+            embedding = await generate_embedding(chunk["content"])
+            combined_metadata = {
+                **chunk["metadata"],
+                **frontmatter_meta,
+                "category": "vault",
+                "file": rel_path,
+            }
+            await store_embedding_chunk(
+                file_path=chunk["filePath"],
+                chunk_index=chunk["chunkIndex"],
+                content=chunk["content"],
+                metadata=combined_metadata,
+                embedding=embedding,
+            )
+    except Exception as e:
+        print(f"Failed to process single file {full_path}: {e}")
 
 
 async def sync_vault(vault_dir: str) -> Dict[str, Any]:
@@ -18,26 +66,39 @@ async def sync_vault(vault_dir: str) -> Dict[str, Any]:
         for file in files:
             if file.endswith(".md"):
                 full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, vault_dir)
-                
-                with open(full_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    
-                chunks = chunk_file_content(f"vault/{rel_path}", content)
-                for chunk in chunks:
-                    try:
-                        embedding = await generate_embedding(chunk["content"])
-                        await store_embedding_chunk(
-                            file_path=chunk["filePath"],
-                            chunk_index=chunk["chunkIndex"],
-                            content=chunk["content"],
-                            metadata={**chunk["metadata"], "category": "vault"},
-                            embedding=embedding
-                        )
-                        total_chunks += 1
-                    except Exception as e:
-                        print(f"Error indexing chunk {chunk['filePath']}: {e}")
-                
+                await process_single_file(full_path, vault_dir)
                 total_files += 1
 
-    return {"total_files": total_files, "total_chunks": total_chunks, "status": "success"}
+    return {"total_files": total_files, "status": "success"}
+
+
+class VaultWatchHandler(FileSystemEventHandler):
+    """Watchdog file handler for real-time vault indexing."""
+
+    def __init__(self, vault_dir: str, loop: asyncio.AbstractEventLoop):
+        self.vault_dir = vault_dir
+        self.loop = loop
+
+    def on_modified(self, event):
+        if not event.is_directory and event.src_path.endswith(".md"):
+            print(f"[Watchdog] Vault note modified: {event.src_path}")
+            asyncio.run_coroutine_threadsafe(
+                process_single_file(event.src_path, self.vault_dir), self.loop
+            )
+
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith(".md"):
+            print(f"[Watchdog] New vault note created: {event.src_path}")
+            asyncio.run_coroutine_threadsafe(
+                process_single_file(event.src_path, self.vault_dir), self.loop
+            )
+
+
+def start_vault_watcher(vault_dir: str, loop: asyncio.AbstractEventLoop) -> Observer:
+    """Starts background real-time file watcher on vault directory."""
+    handler = VaultWatchHandler(vault_dir, loop)
+    observer = Observer()
+    observer.schedule(handler, path=vault_dir, recursive=True)
+    observer.start()
+    print(f"[Watchdog] Real-time Obsidian Vault watcher active on: {vault_dir}")
+    return observer
