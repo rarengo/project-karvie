@@ -17,7 +17,7 @@
           <span :class="['status-dot', healthStatus.litellmService ? 'online' : 'offline']"></span>
         </div>
         <div class="card-details">
-          <p>Endpoint: <code>http://localhost:8000</code></p>
+          <p>Endpoint: <code>{{ litellmUrl }}</code></p>
           <p>Status: <strong>{{ healthStatus.litellmService ? 'Online' : 'Unreachable' }}</strong></p>
         </div>
       </div>
@@ -28,7 +28,7 @@
           <span :class="['status-dot', healthStatus.memoryService ? 'online' : 'offline']"></span>
         </div>
         <div class="card-details">
-          <p>Endpoint: <code>http://localhost:8081</code></p>
+          <p>Endpoint: <code>{{ memoryUrl }}</code></p>
           <p>Status: <strong>{{ healthStatus.memoryService ? 'Online' : 'Unreachable' }}</strong></p>
         </div>
       </div>
@@ -60,7 +60,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { checkHealth } from '../services/api';
+import { checkHealth, LITELLM_API_BASE, MEMORY_API_BASE } from '../services/api';
+
+const litellmUrl = LITELLM_API_BASE;
+const memoryUrl = MEMORY_API_BASE;
 
 const healthStatus = ref({
   memoryService: false,

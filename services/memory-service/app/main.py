@@ -34,11 +34,21 @@ async def lifespan(app: FastAPI):
     await close_db_pool()
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Karvie RAG Memory & AST Indexer Service",
     description="Python FastAPI service providing vector search, YAML frontmatter parsing, and real-time Obsidian vault watching",
     version="2.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

@@ -63,18 +63,33 @@ export async function triggerVaultIndex() {
 }
 
 export async function checkHealth() {
+  let memoryService = false;
+  let litellmService = false;
+
   try {
     const memoryRes = await axios.get(`${MEMORY_API_BASE}/health`, { timeout: 3000 });
-    const litellmRes = await axios.get(`${LITELLM_API_BASE}/health/readiness`, { timeout: 3000 });
-
-    return {
-      memoryService: memoryRes.data.status === 'healthy',
-      litellmService: litellmRes.status === 200,
-    };
+    memoryService = memoryRes.data?.status === 'healthy';
   } catch (e) {
-    return {
-      memoryService: false,
-      litellmService: false,
-    };
+    console.warn('Memory service health check failed:', e);
   }
+
+  try {
+    const litellmRes = await axios.get(`${LITELLM_API_BASE}/health/readiness`, {
+      timeout: 3000,
+      headers: { Authorization: `Bearer ${MASTER_KEY}` },
+    });
+    litellmService = litellmRes.status === 200;
+  } catch (e) {
+    try {
+      const fallbackRes = await axios.get(`${LITELLM_API_BASE}/health`, { timeout: 3000 });
+      litellmService = fallbackRes.status === 200;
+    } catch (e2) {
+      console.warn('LiteLLM health check failed:', e2);
+    }
+  }
+
+  return {
+    memoryService,
+    litellmService,
+  };
 }

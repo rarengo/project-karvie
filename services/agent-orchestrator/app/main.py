@@ -10,10 +10,20 @@ from app.graph.workflow import (
     pending_approvals,
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Karvie LangGraph Multi-Agent Orchestrator Service",
     description="Python multi-agent framework (Planner, Coder, Reviewer, DevOps) with Security Approval Gates",
     version="2.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
