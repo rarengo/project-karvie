@@ -110,6 +110,23 @@ services:
       litellm:
         condition: service_started
 
+  # 6. Karvie Web UI Dashboard (Vue 3 + Glassmorphism + NGINX)
+  web-dashboard:
+    build:
+      context: ./services/web-dashboard
+      dockerfile: Dockerfile
+    container_name: karvie-web-dashboard
+    restart: always
+    ports:
+      - "3000:80"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      - litellm
+      - memory-service
+
 volumes:
   pgdata:
   redisdata:
