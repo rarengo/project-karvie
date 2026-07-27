@@ -20,6 +20,11 @@ sleep 5
 
 docker compose ps
 
+echo "Checking / pulling required Ollama AI models..."
+docker exec karvie-ollama ollama pull nomic-embed-text || true
+docker exec karvie-ollama ollama pull qwen2.5-coder:7b || true
+docker exec karvie-ollama ollama pull qwen2.5-coder:1.5b || true
+
 echo ""
 echo "=========================================="
 echo " Karvie Infrastructure Services Started!"

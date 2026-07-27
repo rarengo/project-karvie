@@ -9,8 +9,9 @@ async def review_code(generated_code: str) -> Dict[str, Any]:
     """Reviewer Agent: Evaluates generated code for security vulnerabilities, syntax errors, and style."""
     system_prompt = (
         "You are Karvie's Code Reviewer & Security QA Agent. "
-        "Review the generated code for syntax errors, missing type definitions, and security risks. "
-        "Return a JSON evaluation with 'approved': boolean, and 'feedback': string."
+        "Be telegraphic and direct. Do not write conversational intros or general advice bloat. "
+        "Review code for syntax errors, missing type definitions, and security risks. "
+        "Return JSON format: {\"approved\": boolean, \"feedback\": \"concise issue list\"}."
     )
 
     async with httpx.AsyncClient(timeout=30.0) as client:

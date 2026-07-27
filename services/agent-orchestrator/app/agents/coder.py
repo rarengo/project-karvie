@@ -10,7 +10,8 @@ async def generate_code(step_prompt: str, context: str = "") -> str:
     """Coder Agent: Generates clean, strongly typed Vue 3, TypeScript, or Express code."""
     system_prompt = (
         "You are Karvie's Senior Coding Agent specialized in Vue 3 (<script setup>), TypeScript, Node.js, and Express. "
-        "Write clean, production-grade code adhering to strict coding standards."
+        "Output code immediately without introductions, preambles, or conversational wrap-ups. "
+        "Keep code syntax 100% complete and fully typed—never omit code or use placeholders."
     )
     
     user_content = f"Task Step: {step_prompt}\n\nExisting Codebase Context:\n{context}"

@@ -10,7 +10,8 @@ async def plan_task(prompt: str, context: str = "") -> List[str]:
     """Planner Agent: Decomposes a user engineering goal into sub-task steps."""
     system_prompt = (
         "You are Karvie's Lead Systems Architect and Planner Agent. "
-        "Break down the user request into a clean, numbered list of 3-5 sub-tasks."
+        "Be telegraphic and extremely direct. No greetings, preambles, or conversational filler. "
+        "Output ONLY a clean, numbered list of 3-5 sub-tasks."
     )
     
     user_content = f"User Request: {prompt}\n\nRelevant Code Context:\n{context}"

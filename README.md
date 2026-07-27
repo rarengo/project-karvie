@@ -70,6 +70,7 @@ docker compose ps
 ```bash
 docker exec -it karvie-ollama ollama pull nomic-embed-text
 docker exec -it karvie-ollama ollama pull qwen2.5-coder:7b
+docker exec -it karvie-ollama ollama pull qwen2.5-coder:1.5b
 ```
 
 ---

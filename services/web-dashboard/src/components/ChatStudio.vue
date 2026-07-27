@@ -96,9 +96,14 @@ const handleSend = async () => {
 
     messages.value.push({ role: 'assistant', content: replyText });
   } catch (err: any) {
+    const errorMsg =
+      err.response?.data?.error?.message ||
+      err.response?.data?.detail ||
+      err.message ||
+      'Failed to reach Karvie AI backend.';
     messages.value.push({
       role: 'assistant',
-      content: `❌ Error: ${err.message || 'Failed to reach Karvie AI backend.'}`,
+      content: `❌ Error: ${errorMsg}`,
     });
   } finally {
     loading.value = false;
