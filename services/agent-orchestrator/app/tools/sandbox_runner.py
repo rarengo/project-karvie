@@ -1,6 +1,10 @@
 import asyncio
 import re
+import time
 from typing import Dict, Any
+from app.logger import setup_logger
+
+logger = setup_logger("agent-orchestrator.sandbox")
 
 # High-risk command patterns requiring human approval
 HIGH_RISK_PATTERNS = [
@@ -26,7 +30,9 @@ def is_high_risk_command(command: str) -> bool:
 
 async def execute_in_sandbox(command: str, cwd: str = "/tmp") -> Dict[str, Any]:
     """Executes a command safely inside an isolated subprocess runner."""
+    logger.info(f"Sandbox runner requested command execution: '{command}' (cwd: {cwd})")
     if is_high_risk_command(command):
+        logger.warning(f"Sandbox runner blocked high-risk command: '{command}'")
         return {
             "status": "APPROVAL_REQUIRED",
             "high_risk": True,
@@ -34,6 +40,7 @@ async def execute_in_sandbox(command: str, cwd: str = "/tmp") -> Dict[str, Any]:
             "message": "Command detected as high-risk. Requires human approval before execution.",
         }
 
+    start_time = time.time()
     try:
         process = await asyncio.create_subprocess_shell(
             command,
@@ -43,6 +50,9 @@ async def execute_in_sandbox(command: str, cwd: str = "/tmp") -> Dict[str, Any]:
         )
 
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+        duration = round(time.time() - start_time, 2)
+
+        logger.info(f"Sandbox command executed in {duration}s (exit_code: {process.returncode}): '{command}'")
 
         return {
             "status": "COMPLETED",
@@ -52,6 +62,8 @@ async def execute_in_sandbox(command: str, cwd: str = "/tmp") -> Dict[str, Any]:
             "command": command,
         }
     except asyncio.TimeoutError:
+        duration = round(time.time() - start_time, 2)
+        logger.error(f"Sandbox command timed out after {duration}s: '{command}'")
         return {
             "status": "TIMEOUT",
             "exit_code": -1,
@@ -59,9 +71,12 @@ async def execute_in_sandbox(command: str, cwd: str = "/tmp") -> Dict[str, Any]:
             "command": command,
         }
     except Exception as e:
+        duration = round(time.time() - start_time, 2)
+        logger.error(f"Sandbox command execution failed after {duration}s: {e}", exc_info=True)
         return {
             "status": "ERROR",
             "exit_code": -1,
             "error": str(e),
             "command": command,
         }
+

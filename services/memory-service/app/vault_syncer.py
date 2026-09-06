@@ -8,6 +8,9 @@ from watchdog.events import FileSystemEventHandler
 from app.ast_indexer import chunk_file_content
 from app.embedder import generate_embedding
 from app.db import store_embedding_chunk, clear_embeddings
+from app.logger import setup_logger
+
+logger = setup_logger("memory-service.vault_syncer")
 
 
 def extract_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
@@ -20,7 +23,7 @@ def extract_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
                 body = parts[2].strip()
                 return metadata, body
             except Exception as e:
-                print(f"Error parsing YAML frontmatter: {e}")
+                logger.error(f"Error parsing YAML frontmatter: {e}")
     return {}, content.strip()
 
 
@@ -49,17 +52,18 @@ async def process_single_file(full_path: str, vault_dir: str):
                 metadata=combined_metadata,
                 embedding=embedding,
             )
+        logger.debug(f"Processed vault note '{rel_path}' into {len(chunks)} chunks.")
     except Exception as e:
-        print(f"Failed to process single file {full_path}: {e}")
+        logger.error(f"Failed to process single file {full_path}: {e}")
 
 
 async def sync_vault(vault_dir: str) -> Dict[str, Any]:
     if not os.path.exists(vault_dir):
+        logger.warning(f"Vault sync failed - directory does not exist: {vault_dir}")
         return {"total_files": 0, "total_chunks": 0, "status": "Directory does not exist"}
 
     total_files = 0
-    total_chunks = 0
-
+    logger.info(f"Starting full sync of Obsidian vault: '{vault_dir}'")
     await clear_embeddings("vault/")
 
     for root, _, files in os.walk(vault_dir):
@@ -69,6 +73,7 @@ async def sync_vault(vault_dir: str) -> Dict[str, Any]:
                 await process_single_file(full_path, vault_dir)
                 total_files += 1
 
+    logger.info(f"Full vault sync completed successfully. Total .md notes synced: {total_files}")
     return {"total_files": total_files, "status": "success"}
 
 
@@ -81,14 +86,14 @@ class VaultWatchHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if not event.is_directory and event.src_path.endswith(".md"):
-            print(f"[Watchdog] Vault note modified: {event.src_path}")
+            logger.info(f"[Watchdog] Vault note modified: {event.src_path}")
             asyncio.run_coroutine_threadsafe(
                 process_single_file(event.src_path, self.vault_dir), self.loop
             )
 
     def on_created(self, event):
         if not event.is_directory and event.src_path.endswith(".md"):
-            print(f"[Watchdog] New vault note created: {event.src_path}")
+            logger.info(f"[Watchdog] New vault note created: {event.src_path}")
             asyncio.run_coroutine_threadsafe(
                 process_single_file(event.src_path, self.vault_dir), self.loop
             )
@@ -100,5 +105,6 @@ def start_vault_watcher(vault_dir: str, loop: asyncio.AbstractEventLoop) -> Obse
     observer = Observer()
     observer.schedule(handler, path=vault_dir, recursive=True)
     observer.start()
-    print(f"[Watchdog] Real-time Obsidian Vault watcher active on: {vault_dir}")
+    logger.info(f"[Watchdog] Real-time Obsidian Vault watcher active on: {vault_dir}")
     return observer
+

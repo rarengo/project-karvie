@@ -1,7 +1,11 @@
 import os
 import json
+import time
 import asyncpg
 from typing import List, Dict, Any, Optional
+from app.logger import setup_logger
+
+logger = setup_logger("memory-service.db")
 
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
 POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
@@ -15,6 +19,7 @@ db_pool: Optional[asyncpg.Pool] = None
 async def get_db_pool() -> asyncpg.Pool:
     global db_pool
     if db_pool is None:
+        logger.info(f"Connecting to PostgreSQL database '{POSTGRES_DB}' at {POSTGRES_HOST}:{POSTGRES_PORT}...")
         db_pool = await asyncpg.create_pool(
             host=POSTGRES_HOST,
             port=POSTGRES_PORT,
@@ -24,14 +29,17 @@ async def get_db_pool() -> asyncpg.Pool:
             min_size=1,
             max_size=10,
         )
+        logger.info("PostgreSQL connection pool established successfully.")
     return db_pool
 
 
 async def close_db_pool():
     global db_pool
     if db_pool:
+        logger.info("Closing PostgreSQL connection pool...")
         await db_pool.close()
         db_pool = None
+        logger.info("PostgreSQL connection pool closed.")
 
 
 async def store_embedding_chunk(
@@ -61,7 +69,9 @@ async def store_embedding_chunk(
             json.dumps(metadata),
             vector_str,
         )
-        return str(row["id"])
+        chunk_id = str(row["id"])
+        logger.debug(f"Stored embedding chunk {chunk_index} for file '{file_path}' (id: {chunk_id})")
+        return chunk_id
 
 
 async def search_code_context(
@@ -86,8 +96,10 @@ async def search_code_context(
         LIMIT $3;
     """
     
+    start_time = time.time()
     async with pool.acquire() as conn:
         rows = await conn.fetch(query, vector_str, similarity_threshold, limit)
+        duration_ms = round((time.time() - start_time) * 1000, 2)
         results = []
         for r in rows:
             results.append({
@@ -98,6 +110,7 @@ async def search_code_context(
                 "metadata": json.loads(r["metadata"]) if isinstance(r["metadata"], str) else r["metadata"],
                 "similarity": float(r["similarity"]),
             })
+        logger.info(f"pgvector query executed in {duration_ms}ms (found {len(results)} rows above threshold {similarity_threshold})")
         return results
 
 
@@ -105,6 +118,9 @@ async def clear_embeddings(prefix: Optional[str] = None):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         if prefix:
+            logger.info(f"Clearing embeddings matching prefix: '{prefix}%'")
             await conn.execute("DELETE FROM project_embeddings WHERE file_path LIKE $1", f"{prefix}%")
         else:
+            logger.info("Clearing all project embeddings from DB")
             await conn.execute("DELETE FROM project_embeddings")
+
