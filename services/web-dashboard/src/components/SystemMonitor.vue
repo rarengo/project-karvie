@@ -50,7 +50,7 @@
           <span class="status-dot online"></span>
         </div>
         <div class="card-details">
-          <p>Models Loaded: <code>qwen2.5-coder:7b</code>, <code>nomic-embed-text</code></p>
+          <p>Models Loaded: <code>qwen2.5-coder:1.5b</code>, <code>nomic-embed-text</code></p>
           <p>Status: <strong>Active (8GB RAM Cap)</strong></p>
         </div>
       </div>

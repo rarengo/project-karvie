@@ -1,8 +1,8 @@
 model_list:
-  # Primary Local Coding Model (Optimized for 16GB RAM laptop host: Qwen2.5-Coder-7B)
+  # Primary Local Coding Model (Optimized for 16GB RAM laptop host: Qwen2.5-Coder-1.5B)
   - model_name: karvie-coder
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen2.5-coder:1.5b
       api_base: http://ollama:11434
       temperature: 0.2
       max_tokens: 4096
