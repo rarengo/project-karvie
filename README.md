@@ -1,6 +1,6 @@
 # Project Karvie - Autonomous AI Software Engineer & Automation Platform
 
-**Project Karvie** is a self-hosted, multi-agent AI software engineering platform built on a 100% Python backend, LangGraph agent orchestration framework, Vue 3 Web Dashboard, and local LLM inference engines (`Qwen2.5-Coder:7b` + `nomic-embed-text` via Ollama).
+**Project Karvie** is a self-hosted, multi-agent AI software engineering platform built on a 100% Python backend, LangGraph agent orchestration framework, Vue 3 Web Dashboard, and local LLM inference engines (`Qwen2.5-Coder:1.5b` + `nomic-embed-text` via Ollama).
 
 ---
 
@@ -69,7 +69,6 @@ docker compose ps
 ### Step 3: Pull Local AI Models in Ollama
 ```bash
 docker exec -it karvie-ollama ollama pull nomic-embed-text
-docker exec -it karvie-ollama ollama pull qwen2.5-coder:7b
 docker exec -it karvie-ollama ollama pull qwen2.5-coder:1.5b
 ```
 
